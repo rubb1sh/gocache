@@ -39,11 +39,10 @@ func (g *GoCache) Add(k, v string, ttl time.Duration) error {
 	g._Map[k] = v
 	t := time.Now().Add(ttl)
 	_, ok := g.timeMap[timeStamp(t.Unix())]
-	if ok {
-		g.timeMap[timeStamp(t.Unix())] = append(g.timeMap[timeStamp(t.Unix())], k)
-	} else {
+	if !ok {
 		g.timeMap[timeStamp(t.Unix())] = make([]string, 0)
 	}
+	g.timeMap[timeStamp(t.Unix())] = append(g.timeMap[timeStamp(t.Unix())], k)
 
 	log.Debugf("add a key, k=%s, v=%s, ttl=%v", k, v, t)
 	return nil
@@ -54,7 +53,6 @@ func (g *GoCache) Run() {
 
 	go func() {
 		for t := range ticker.C {
-			log.Debugf("run 1 second, now=%v", t)
 			if _, ok := g.timeMap[timeStamp(t.Unix())]; ok {
 				g.deleteWithTTL(timeStamp(t.Unix()))
 			}
@@ -72,12 +70,12 @@ func (g *GoCache) deleteWithTTL(ts timeStamp) {
 	if !ok {
 		return
 	}
-
-	delete(g.timeMap, ts)
+	log.Debugf("delete key, key=%+v, now=%v", keys, time.Unix(int64(ts), 0))
 	for _, key := range keys {
 		delete(g._Map, key)
 		log.Debugf("delete key, key=%s, now=%v", key, time.Unix(int64(ts), 0))
 	}
+	delete(g.timeMap, ts)
 
 }
 
